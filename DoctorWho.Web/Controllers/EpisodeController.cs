@@ -32,6 +32,29 @@ namespace DoctorWho.Web.Controllers
         {
             var episodesFromRepo = _episodeRepository.GetEpisodes();
             return Ok(_mapper.Map<List<EpisodeDto>>(episodesFromRepo));
-        }       
+        }
+
+        [HttpPost("api/episodes")]
+        public ActionResult<EpisodeDto> CreateEpisode(EpisodeForCreationDto episode)
+        {
+
+            EpisodeValidator validator = new EpisodeValidator();
+
+            ValidationResult results = validator.Validate(episode);
+
+            if (!results.IsValid)
+            {
+                foreach (var failure in results.Errors)
+                {
+                    return BadRequest(failure);
+                }
+            }
+
+            var newEpisode = _mapper.Map<Episode>(episode);
+            _episodeRepository.InsertEpisode(newEpisode);
+
+            var episodeToReturn = _mapper.Map<EpisodeDto>(newEpisode);
+            return Ok(episodeToReturn.DoctorId);
+        }
     }
 }
