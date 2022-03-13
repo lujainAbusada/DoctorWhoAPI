@@ -70,5 +70,17 @@ namespace DoctorWho.Web.Controllers
             return CreatedAtRoute("GetDoctor", new { doctorId = doctorToReturn.DoctorId }, doctorToReturn);
 
         }
+
+        [HttpDelete("{doctorId}")]
+        public ActionResult DeleteDoctor(int doctorId)
+        {
+            if (_doctorRepository.GetDoctors().Where(d => d.DoctorId == doctorId).FirstOrDefault() == null)
+            {
+                return NotFound();
+            }
+            else
+                _doctorRepository.DeleteDoctor(doctorId);
+            return NoContent();
+        }
     }
 }
