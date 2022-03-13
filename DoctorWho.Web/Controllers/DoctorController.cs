@@ -1,11 +1,15 @@
-﻿using AutoMapper;
-using DoctorWho.Db.DataModels;
-using DoctorWho.Db.Repositories;
-using DoctorWho.Web.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading.Tasks;
+using DoctorWho.Db.Repositories;
+using DoctorWho.Db.DataModels;
+using DoctorWho.Web.Profiles;
+using DoctorWho.Web.Models;
+using AutoMapper;
+using DoctorWho.Web.Validators;
+using FluentValidation.Results;
 namespace DoctorWho.Web.Controllers
 {
     [ApiController]
@@ -41,6 +45,30 @@ namespace DoctorWho.Web.Controllers
                 var doctorFromRepo = _doctorRepository.GetDoctors().Where(d => d.DoctorId == doctorId).FirstOrDefault();
                 return Ok(_mapper.Map<DoctorDto>(doctorFromRepo));
             }
+        }
+
+        [HttpPut()]
+        public ActionResult<DoctorDto> UpsertDoctor(DoctorForCreationDto doctor)
+        {
+
+            DoctorValidator validator = new DoctorValidator();
+
+            ValidationResult results = validator.Validate(doctor);
+
+            if (!results.IsValid)
+            {
+                foreach (var failure in results.Errors)
+                {
+                    return BadRequest(failure);
+                }
+            }
+
+            var newDoctor = _mapper.Map<DoctorWho.Db.DataModels.Doctor>(doctor);
+            _doctorRepository.InsertDoctor(newDoctor);
+
+            var doctorToReturn = _mapper.Map<DoctorDto>(newDoctor);
+            return CreatedAtRoute("GetDoctor", new { doctorId = doctorToReturn.DoctorId }, doctorToReturn);
+
         }
     }
 }
