@@ -1,15 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using DoctorWho.Db.Repositories;
+﻿using AutoMapper;
 using DoctorWho.Db.DataModels;
-using DoctorWho.Web.Profiles;
+using DoctorWho.Db.Repositories;
 using DoctorWho.Web.Models;
-using AutoMapper;
 using DoctorWho.Web.Validators;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DoctorWho.Web.Controllers
 {
@@ -17,29 +14,26 @@ namespace DoctorWho.Web.Controllers
     [Route("api/episodes")]
     public class EpisodeController : ControllerBase
     {
-        private readonly EpisodeRepository _episodeRepository;
+        private readonly EpisodeAsyncRepository _episodeAsyncRepository;
         private readonly IMapper _mapper;
 
         public EpisodeController(IMapper mapper)
         {
-            _episodeRepository = new EpisodeRepository();
+            _episodeAsyncRepository = new EpisodeAsyncRepository();
             _mapper = mapper;
-
         }
 
         [HttpGet()]
-        public ActionResult<IEnumerable<Episode>> GetEpisodes()
+        public async Task<ActionResult<IEnumerable<Episode>>> GetEpisodesAsync()
         {
-            var episodesFromRepo = _episodeRepository.GetEpisodes();
+            var episodesFromRepo = await _episodeAsyncRepository.GetAsyncEpisodes();
             return Ok(_mapper.Map<List<EpisodeDto>>(episodesFromRepo));
         }
 
-        [HttpPost("api/episodes")]
-        public ActionResult<EpisodeDto> CreateEpisode(EpisodeForCreationDto episode)
+        [HttpPost()]
+        public async Task<ActionResult<EpisodeDto>> CreateEpisodeAsync(EpisodeForCreationDto episode)
         {
-
             EpisodeValidator validator = new EpisodeValidator();
-
             ValidationResult results = validator.Validate(episode);
 
             if (!results.IsValid)
@@ -51,8 +45,7 @@ namespace DoctorWho.Web.Controllers
             }
 
             var newEpisode = _mapper.Map<Episode>(episode);
-            _episodeRepository.InsertEpisode(newEpisode);
-
+            await _episodeAsyncRepository.InsertAsyncEpisode(newEpisode);
             var episodeToReturn = _mapper.Map<EpisodeDto>(newEpisode);
             return Ok(episodeToReturn.DoctorId);
         }

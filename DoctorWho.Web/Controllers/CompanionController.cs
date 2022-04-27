@@ -1,40 +1,40 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Linq;
-using DoctorWho.Db.Repositories;
+﻿using AutoMapper;
 using DoctorWho.Db.DataModels;
+using DoctorWho.Db.Repositories;
 using DoctorWho.Web.Models;
-using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DoctorWho.Web.Controllers
 {
     [ApiController]
     public class CompanionController : ControllerBase
     {
-        private readonly EpisodeRepository _episodeRepository;
-        private readonly CompanionRepository _companionRepository;
+        private readonly CompanionAsyncRepository _companionAsyncRepository;
         private readonly IMapper _mapper;
+        private readonly EpisodeAsyncRepository _episodeAsyncRepository;
 
         public CompanionController(IMapper mapper)
         {
-            _episodeRepository = new EpisodeRepository();
-            _companionRepository = new CompanionRepository();
+            _companionAsyncRepository = new CompanionAsyncRepository();
+            _episodeAsyncRepository = new EpisodeAsyncRepository();
             _mapper = mapper;
         }
 
         [HttpGet("api/companions")]
-        public ActionResult<IEnumerable<Enemy>> GetCompanions()
+        public async Task<ActionResult> GetCompanions()
         {
-            var companionsFromRepo = _companionRepository.GetCompanions();
+            var companionsFromRepo = await _companionAsyncRepository.GetAsyncCompanions();
             return Ok(_mapper.Map<List<CompanionDto>>(companionsFromRepo));
         }
 
         [HttpPost("api/episodes/{episodeId}/companions")]
-        public ActionResult<CompanionDto> AddCompanionToEpisode(CompanionForCreationDto companion, int episodeId)
+        public async Task<ActionResult> AddCompanionToEpisode(CompanionForCreationDto companion, int episodeId)
         {
             var newCompanion = _mapper.Map<Companion>(companion);
-            _companionRepository.InsertCompanion(newCompanion);
-            _episodeRepository.AddCompanion(_episodeRepository.GetEpisodes().Where(e => e.EpisodeId == episodeId).FirstOrDefault(), newCompanion.CompanionId);
+            await _companionAsyncRepository.InsertAsyncCompanion(newCompanion);
+            await _episodeAsyncRepository.AddAsyncCompanion(await _episodeAsyncRepository.GetAsyncEpisode(episodeId), newCompanion.CompanionId);
             return Ok("Companion Added To Episode");
         }
     }

@@ -1,59 +1,49 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using AutoMapper;
 using DoctorWho.Db.Repositories;
-using DoctorWho.Db.DataModels;
-using DoctorWho.Web.Profiles;
 using DoctorWho.Web.Models;
-using AutoMapper;
-using DoctorWho.Web.Validators;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DoctorWho.Web.Controllers
 {
     [ApiController]
     [Route("api/authors")]
-
     public class AuthorController : ControllerBase
     {
-        private readonly AuthorRepository _authorRepository;
+        private readonly AuthorAsyncRepository _authorAsyncRepository;
         private readonly IMapper _mapper;
 
         public AuthorController(IMapper mapper)
         {
-            _authorRepository = new AuthorRepository();
+            _authorAsyncRepository = new AuthorAsyncRepository();
             _mapper = mapper;
         }
 
         [HttpGet()]
-        public ActionResult<IEnumerable<Author>> GetAuthors()
+        public async Task<ActionResult> GetAuthors()
         {
-            var AuthorsFromRepo = _authorRepository.GetAuthors();
+            var AuthorsFromRepo = await _authorAsyncRepository.GetAsyncAuthors();
             return Ok(_mapper.Map<List<AuthorDto>>(AuthorsFromRepo));
         }
 
         [HttpGet("{authorId}")]
-        public ActionResult<IEnumerable<Author>> GetAuthor(int authorId)
+        public async Task<ActionResult> GetAuthor(int authorId)
         {
-            if (_authorRepository.GetAuthors().Where(d => d.AuthorId == authorId).FirstOrDefault() == null)
+            var item = await _authorAsyncRepository.GetAsyncAuthor(authorId);
+            if (item == null)
             {
                 return NotFound();
             }
-            else
-            {
-                var AuthorFromRepo = _authorRepository.GetAuthors().Where(d => d.AuthorId == authorId).FirstOrDefault();
-                return Ok(_mapper.Map<AuthorDto>(AuthorFromRepo));
-            }
+            return Ok(_mapper.Map<AuthorDto>(item));
         }
 
         [HttpPatch("{authorId}")]
-        public ActionResult<AuthorDto> UpdateAuthor(int authorId,JsonPatchDocument<AuthorForUpdateDto> patchDocument)
+        public async Task<IActionResult> UpdateAuthor(int authorId, JsonPatchDocument<AuthorForUpdateDto> patchDocument)
         {
-            var authorFromRepo = _authorRepository.GetAuthors().Where(d => d.AuthorId == authorId).FirstOrDefault();
-            if ( authorFromRepo== null)
+            var authorFromRepo = await _authorAsyncRepository.GetAsyncAuthor(authorId);
+            if (authorFromRepo == null)
             {
                 return NotFound();
             }
@@ -61,10 +51,17 @@ namespace DoctorWho.Web.Controllers
             {
                 var authorToPatch = _mapper.Map<AuthorForUpdateDto>(authorFromRepo);
                 patchDocument.ApplyTo(authorToPatch);
-                _mapper.Map(authorToPatch, authorFromRepo);
-                _authorRepository.UpdateAuthorName(authorId, authorFromRepo.AuthorName);
-                return Ok("Author's Name Updated");
+                var finalauhtor = _mapper.Map(authorToPatch, authorFromRepo);
+                await _authorAsyncRepository.UpdateAsyncAuthor(finalauhtor);
+                return Ok("Author Updated");
             }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _authorAsyncRepository.DeleteAsyncAuthor(id);
+            return NoContent();
         }
     }
 }
